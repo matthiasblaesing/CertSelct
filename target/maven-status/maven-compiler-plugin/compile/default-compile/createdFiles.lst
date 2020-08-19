@@ -1,0 +1,7 @@
+Cryptdlg$CERT_SELECT_STRUCT.class
+Cryptdlg$FncmFilterProcCallback.class
+Main.class
+CertCallback.class
+Cryptdlg$CERT_SELECT_STRUCT$ByReference.class
+Cryptdlg.class
+Cryptdlg$HCRYPTPROV.class
