@@ -5,6 +5,7 @@ import com.sun.jna.Structure;
 import com.sun.jna.platform.win32.BaseTSD;
 import com.sun.jna.platform.win32.WinCrypt;
 import com.sun.jna.platform.win32.WinDef;
+import com.sun.jna.platform.win32.WinDef.LPARAM;
 import com.sun.jna.win32.W32APIOptions;
 import java.util.List;
 
@@ -119,6 +120,6 @@ public interface Cryptdlg extends StdCallLibrary{
     public interface FncmFilterProcCallback extends StdCallLibrary.StdCallCallback {
 
         public boolean callback(
-                WinCrypt.CERT_CONTEXT pCertContext, String lCustData, int dwFlags, int dwDisplayWell);
+                WinCrypt.CERT_CONTEXT pCertContext, LPARAM lCustData, int dwFlags, int dwDisplayWell);
     }
 }
