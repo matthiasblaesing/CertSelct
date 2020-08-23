@@ -2,12 +2,12 @@ import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
+import com.sun.jna.Structure.FieldOrder;
 import com.sun.jna.platform.win32.BaseTSD;
 import com.sun.jna.platform.win32.WinCrypt;
 import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinDef.LPARAM;
 import com.sun.jna.win32.W32APIOptions;
-import java.util.List;
 
 import com.sun.jna.win32.StdCallLibrary;
 
@@ -18,12 +18,13 @@ public interface Cryptdlg extends StdCallLibrary{
 
     public boolean CertSelectCertificate(CERT_SELECT_STRUCT pCertSelectInfo);
 
+    @FieldOrder({
+        "dwSize", "hwndParent", "hInstance", "pTemplateName", "dwFlags", 
+        "szTitle", "cCertStore", "arrayCertStore", "szPurposeOid", 
+        "cCertContext", "arrayCertContext", "lCustData", "pfnHook", "pfnFilter",
+        "szHelpFileName", "dwHelpId", "hprov"})
     public static class CERT_SELECT_STRUCT extends Structure {
 
-        private static final List<String> fieldOrder =
-                createFieldsOrder(
-                        "dwSize", "hwndParent", "hInstance", "pTemplateName", "dwFlags", "szTitle", "cCertStore", "arrayCertStore", "szPurposeOid", "cCertContext", "arrayCertContext", "lCustData",
-                        "pfnHook", "pfnFilter", "szHelpFileName", "dwHelpId", "hprov");
 
         public static class ByReference extends CERT_SELECT_STRUCT implements Structure.ByReference {}
 
@@ -47,33 +48,6 @@ public interface Cryptdlg extends StdCallLibrary{
 
         public CERT_SELECT_STRUCT() {
             super();
-        }
-
-        public WinCrypt.CERT_CONTEXT[] getArrayCertContext() {
-            WinCrypt.CERT_CONTEXT[] elements = new WinCrypt.CERT_CONTEXT[cCertContext];
-            for (int i = 0; i < elements.length; i++) {
-                elements[i] =
-                        (WinCrypt.CERT_CONTEXT)
-                                Structure.newInstance(
-                                        WinCrypt.CERT_CONTEXT.class,
-                                        arrayCertContext.getPointer(i * Native.POINTER_SIZE));
-                elements[i].read();
-            }
-            return elements;
-        }
-
-        public void setArrayCertContext(WinCrypt.CERT_CONTEXT[] arrayCertContexts) {
-            if (arrayCertContexts == null || arrayCertContexts.length == 0) {
-                arrayCertContext = null;
-                cCertContext = 0;
-            } else {
-                cCertContext = arrayCertContexts.length;
-                Memory mem = new Memory(Native.POINTER_SIZE * arrayCertContexts.length);
-                for (int i = 0; i < arrayCertContexts.length; i++) {
-                    mem.setPointer(i * Native.POINTER_SIZE, arrayCertContexts[i].getPointer());
-                }
-                arrayCertContext = mem;
-            }
         }
 
         public void setArrayCertStore(WinCrypt.HCERTSTORE[] stores) {

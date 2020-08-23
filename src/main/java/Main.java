@@ -1,14 +1,17 @@
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
+import com.sun.jna.Structure;
 import com.sun.jna.platform.DesktopWindow;
 import com.sun.jna.platform.WindowUtils;
 import com.sun.jna.platform.win32.Crypt32;
 import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinCrypt;
+import com.sun.jna.platform.win32.WinCrypt.CERT_CONTEXT;
 import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.win32.W32APIOptions;
 import java.awt.*;
 import java.util.List;
 
@@ -23,17 +26,29 @@ public class Main {
 
         Cryptdlg.CERT_SELECT_STRUCT pCertSelectInfo = new Cryptdlg.CERT_SELECT_STRUCT();
         pCertSelectInfo.hwndParent = parentHwnd;
-        Memory message1 = new Memory(((SELECT_CERT_PREFIX.length() + 1) * (long) Native.WCHAR_SIZE));
-        message1.setWideString(0, SELECT_CERT_PREFIX);
-        pCertSelectInfo.szTitle = message1;
+        pCertSelectInfo.szTitle = SELECT_CERT_PREFIX;
         pCertSelectInfo.pfnFilter = new CertCallback();
         pCertSelectInfo.cCertStore = 1;
-        pCertSelectInfo.arrayCertStore = hCertStore.getPointer();
+        pCertSelectInfo.setArrayCertStore(new WinCrypt.HCERTSTORE[]{hCertStore});
+        // Prepare space for exactly one CertContext (according to documentation
+        // more is not used). The field is initialized with a null pointer, if
+        // a value is passed in, it will be freed by CertFreeCertificateContext.
         pCertSelectInfo.cCertContext = 1;
-        WinCrypt.CERT_CONTEXT[] pContexts = (WinCrypt.CERT_CONTEXT[]) new WinCrypt.CERT_CONTEXT().toArray(1);
-        pCertSelectInfo.setArrayCertContext(pContexts);
+        pCertSelectInfo.arrayCertContext = new Memory(Native.POINTER_SIZE);
+        pCertSelectInfo.arrayCertContext.setPointer(0, Pointer.NULL);
         boolean suc = cryptdlg.CertSelectCertificate(pCertSelectInfo);
-        return pCertSelectInfo.getArrayCertContext()[0];
+        // If a certificate was selected the first value of the result array
+        // is a pointer to a CERT_CONTEXT, if user canceled, it will be null
+        Pointer contextPointer = pCertSelectInfo.arrayCertContext.getPointer(0);
+        if(contextPointer != null) {
+            // use the returned pointer to build a CERT_CONTEXT and init the
+            // java values with the native values
+            CERT_CONTEXT cc = (CERT_CONTEXT) Structure.newInstance(CERT_CONTEXT.class, contextPointer);
+            cc.read();
+            return cc;
+        } else {
+            return null;
+        }
     }
 
 
@@ -109,7 +124,26 @@ public class Main {
         ob.setParentHwnd();
         ob.openSystemStore();
         WinCrypt.CERT_CONTEXT ctx = ob.selectCertificate();
+        if(ctx != null) {
+            System.out.println("Selected: ");
+            System.out.printf("%20s: %s%n", "Issuer", decodeName(ctx.pCertInfo.Issuer));
+            System.out.printf("%20s: %s%n", "Subject", decodeName(ctx.pCertInfo.Subject));
+        } else {
+            System.out.println("Cancel");
+        }
         ob.closeSystemStore(ctx);
 
+    }
+    
+    private static String decodeName(WinCrypt.DATA_BLOB blob) {
+        int charCount = 512;
+        boolean wide = W32APIOptions.DEFAULT_OPTIONS == W32APIOptions.UNICODE_OPTIONS;
+        Memory buffer = new Memory(charCount * (wide ? Native.WCHAR_SIZE : 1));
+        Crypt32.INSTANCE.CertNameToStr(1, blob, 1, buffer, charCount);
+        if(wide) {
+            return buffer.getWideString(0);
+        } else {
+            return buffer.getString(0);
+        }
     }
 }
