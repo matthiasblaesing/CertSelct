@@ -13,8 +13,7 @@ import com.sun.jna.win32.StdCallLibrary;
 public interface Cryptdlg extends StdCallLibrary{
     public static final String LIBRARY_NAME = "Cryptdlg";
 
-    Cryptdlg INSTANCE =
-            (Cryptdlg) Native.loadLibrary(LIBRARY_NAME, Cryptdlg.class, W32APIOptions.DEFAULT_OPTIONS);
+    Cryptdlg INSTANCE = Native.load(LIBRARY_NAME, Cryptdlg.class, W32APIOptions.DEFAULT_OPTIONS);
 
     public boolean CertSelectCertificate(CERT_SELECT_STRUCT pCertSelectInfo);
 
